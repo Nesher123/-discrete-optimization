@@ -3,7 +3,7 @@
 
 def solve_it(input_data):
     # return a positive integer, as a string
-    return '7'
+    return '10'
 
 
 if __name__ == '__main__':
