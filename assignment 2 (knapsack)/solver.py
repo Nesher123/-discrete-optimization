@@ -7,6 +7,25 @@ import sys
 Item = namedtuple("Item", ['index', 'value', 'weight'])
 
 
+def greedy_with_densities(items: list, capacity: int) -> [float, float]:
+    """
+    a GREEDY algorithm for filling the knapsack
+    it takes items in-order from the **sorted density list** (by value/weight !!!) until the knapsack is full
+    """
+    sorted_items_by_density = sorted(items, key=lambda x: x.value / x.weight, reverse=True)
+    value = 0
+    weight = 0
+    taken = [0] * len(sorted_items_by_density)
+
+    for item in sorted_items_by_density:
+        if weight + item.weight <= capacity:
+            taken[item.index] = 1
+            value += item.value
+            weight += item.weight
+
+    return value, taken
+
+
 def solve_it(input_data):
     # Modify this code to run your optimization algorithm
 
@@ -24,18 +43,7 @@ def solve_it(input_data):
         parts = line.split()
         items.append(Item(i - 1, int(parts[0]), int(parts[1])))
 
-    # a GREEDY algorithm for filling the knapsack
-    # it takes items in-order from the **sorted density list** (by value/weight !!!) until the knapsack is full
-    sorted_items_by_density = sorted(items, key=lambda item: item.value / item.weight, reverse=True)
-    value = 0
-    weight = 0
-    taken = [0] * len(sorted_items_by_density)
-
-    for item in sorted_items_by_density:
-        if weight + item.weight <= capacity:
-            taken[item.index] = 1
-            value += item.value
-            weight += item.weight
+    value, taken = greedy_with_densities(items, capacity)
 
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
