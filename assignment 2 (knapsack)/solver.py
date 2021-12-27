@@ -93,8 +93,11 @@ def solve_it(input_data):
         items.append(Item(i - 1, int(parts[0]), int(parts[1])))
 
     # value, taken = naive(items, capacity)  # naive approach
-    # value, taken = greedy_with_densities(items, capacity)  # greedy approach
-    value, taken = dp(items, capacity)  # dynamic programming approach
+
+    if item_count in [400, 10000]:
+        value, taken = greedy_with_densities(items, capacity)  # greedy approach
+    else:
+        value, taken = dp(items, capacity)  # dynamic programming approach
 
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
