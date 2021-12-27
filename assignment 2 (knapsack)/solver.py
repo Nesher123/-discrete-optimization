@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
+import sys
 
 Item = namedtuple("Item", ['index', 'value', 'weight'])
 
@@ -12,9 +13,9 @@ def solve_it(input_data):
     # parse the input
     lines = input_data.split('\n')
 
-    firstLine = lines[0].split()
-    item_count = int(firstLine[0])
-    capacity = int(firstLine[1])
+    first_line = lines[0].split()
+    item_count = int(first_line[0])
+    capacity = int(first_line[1])
 
     items = []
 
@@ -23,13 +24,14 @@ def solve_it(input_data):
         parts = line.split()
         items.append(Item(i - 1, int(parts[0]), int(parts[1])))
 
-    # a trivial algorithm for filling the knapsack
-    # it takes items in-order until the knapsack is full
+    # a GREEDY algorithm for filling the knapsack
+    # it takes items in-order from the **sorted density list** (by value/weight !!!) until the knapsack is full
+    sorted_items_by_density = sorted(items, key=lambda item: item.value / item.weight, reverse=True)
     value = 0
     weight = 0
-    taken = [0] * len(items)
+    taken = [0] * len(sorted_items_by_density)
 
-    for item in items:
+    for item in sorted_items_by_density:
         if weight + item.weight <= capacity:
             taken[item.index] = 1
             value += item.value
@@ -43,8 +45,6 @@ def solve_it(input_data):
 
 
 if __name__ == '__main__':
-    import sys
-
     if len(sys.argv) > 1:
         file_location = sys.argv[1].strip()
         with open(file_location, 'r') as input_data_file:
