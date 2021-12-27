@@ -7,23 +7,38 @@ import sys
 Item = namedtuple("Item", ['index', 'value', 'weight'])
 
 
-def greedy_with_densities(items: list, capacity: int) -> [float, float]:
-    """
-    a GREEDY algorithm for filling the knapsack
-    it takes items in-order from the **sorted density list** (by value/weight !!!) until the knapsack is full
-    """
-    sorted_items_by_density = sorted(items, key=lambda x: x.value / x.weight, reverse=True)
+def add_items_from_list_by_order_until_full(input_list: list, capacity: int) -> [float, float]:
+    """given a list of items, add them to the knapsack by their order until capacity is reached"""
     value = 0
     weight = 0
-    taken = [0] * len(sorted_items_by_density)
+    taken = [0] * len(input_list)
 
-    for item in sorted_items_by_density:
+    for item in input_list:
         if weight + item.weight <= capacity:
             taken[item.index] = 1
             value += item.value
             weight += item.weight
 
     return value, taken
+
+
+def naive(items: list, capacity: int) -> [float, float]:
+    """
+    a trivial algorithm for filling the knapsack
+    it takes items in-order from the initial items list (by their appearance in the input file)
+    until the knapsack is full
+    """
+    return add_items_from_list_by_order_until_full(items, capacity)
+
+
+def greedy_with_densities(items: list, capacity: int) -> [float, float]:
+    """
+    a GREEDY algorithm for filling the knapsack
+    it sorts all items by decreasing densities (value/weight ratio)
+    and then adds the items from this density list in-order until the knapsack is full
+    """
+    sorted_items_by_density = sorted(items, key=lambda x: x.value / x.weight, reverse=True)
+    return add_items_from_list_by_order_until_full(sorted_items_by_density, capacity)
 
 
 def solve_it(input_data):
@@ -43,7 +58,8 @@ def solve_it(input_data):
         parts = line.split()
         items.append(Item(i - 1, int(parts[0]), int(parts[1])))
 
-    value, taken = greedy_with_densities(items, capacity)
+    # value, taken = naive(items, capacity)  # naive approach
+    value, taken = greedy_with_densities(items, capacity)  # greedy approach
 
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
