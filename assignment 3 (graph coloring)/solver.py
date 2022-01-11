@@ -13,6 +13,7 @@ def solve_it(input_data):
     edge_count = int(first_line[1])
 
     edges = []
+
     for i in range(1, edge_count + 1):
         line = lines[i]
         parts = line.split()
@@ -29,15 +30,15 @@ def solve_it(input_data):
     return output_data
 
 
-import sys
-
 if __name__ == '__main__':
     import sys
 
     if len(sys.argv) > 1:
         file_location = sys.argv[1].strip()
+
         with open(file_location, 'r') as input_data_file:
             input_data = input_data_file.read()
+
         print(solve_it(input_data))
     else:
         print(
