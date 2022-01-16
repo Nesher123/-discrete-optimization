@@ -1,15 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import sys
 
-"""Helper functions"""
-import logging
+'''Helper functions'''
 
 
-def find_indices(lst, condition):
+def find_indices(lst: list, condition) -> list:
     return [i for i, elem in enumerate(lst) if condition(elem)]
 
 
-"""Different solutions functions"""
+'''Different solutions functions'''
 
 
 def trivial(node_count: int) -> range:
@@ -46,8 +46,8 @@ def greedy(node_count: int, edges: list[tuple[int, int]]) -> list[int]:
     return solution
 
 
-def CP_solver(num_vals, edges) -> [list[int], bool]:
-    """calling the solver"""
+def CP_solver_or_tools(num_vals: int, edges: list[tuple[int, int]]) -> [list[int], bool]:
+    """calling the OR-tools solver"""
     from ortools.sat.python import cp_model
 
     # Create the model
@@ -59,6 +59,7 @@ def CP_solver(num_vals, edges) -> [list[int], bool]:
     ]
 
     # Create the constraints:
+    model.Add(variables[0] == 0)  # reduces the search space by a bit
     [model.Add(variables[v_1] != variables[v_2]) for v_1, v_2 in edges]
 
     # Creates a solver and solves the model.
@@ -74,6 +75,27 @@ def CP_solver(num_vals, edges) -> [list[int], bool]:
     return solution, (status == cp_model.OPTIMAL)
 
 
+def CP_solver_minizinc(node_count: int, edge_count: int, edges: list[tuple[int, int]]) -> [list[int], bool]:
+    """calling the MiniZinc solver"""
+    from minizinc import Instance, Model, Solver, Status
+
+    # Run input_data through Minizinc Model
+    mz_model = 'graph_coloring.mzn'
+    model = Model(mz_model)
+    # Find the MiniZinc solver configuration for Gecode
+    gecode = Solver.lookup('gecode')
+    # Create an Instance of the model for Gecode
+    instance = Instance(gecode, model)
+
+    # Assign values to arguments
+    instance['NODE_COUNT'] = node_count
+    instance['EDGE_COUNT'] = edge_count
+    instance['EDGES'] = edges
+    result = instance.solve()
+
+    return result.solution.colors, (result.status == Status.OPTIMAL_SOLUTION)
+
+
 def solve_it(input_data):
     # Modify this code to run your optimization algorithm
 
@@ -83,7 +105,6 @@ def solve_it(input_data):
     first_line = lines[0].split()
     node_count = int(first_line[0])
     edge_count = int(first_line[1])
-    is_optimal = False
 
     edges = []
 
@@ -92,10 +113,10 @@ def solve_it(input_data):
         parts = line.split()
         edges.append((int(parts[0]), int(parts[1])))
 
-    # solution = trivial(node_count)
-    # solution = greedy(node_count, edges)
-    solution, is_optimal = CP_solver(node_count, edges)
-
+    # solution, is_optimal = trivial(node_count), False
+    # solution, is_optimal = greedy(node_count, edges), False
+    # solution, is_optimal = CP_solver_or_tools(node_count, edges)
+    solution, is_optimal = CP_solver_minizinc(node_count, edge_count, edges)
     objective_value = len(set(solution))  # number of colors
 
     # prepare the solution in the specified output format
@@ -106,8 +127,6 @@ def solve_it(input_data):
 
 
 if __name__ == '__main__':
-    import sys
-
     if len(sys.argv) > 1:
         file_location = sys.argv[1].strip()
 
