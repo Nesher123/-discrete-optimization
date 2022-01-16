@@ -1,22 +1,23 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-# Helper functions
-# def remove_duplicates(lst):
-#     return list({*map(tuple, map(sorted, lst))})
+"""Helper functions"""
+import logging
 
 
-# Different solutions functions
+def find_indices(lst, condition):
+    return [i for i, elem in enumerate(lst) if condition(elem)]
+
+
+"""Different solutions functions"""
+
+
 def trivial(node_count: int) -> range:
     """
     build a trivial solution
     every node has its own color
     """
     return range(0, node_count)
-
-
-def find_indices(lst, condition):
-    return [i for i, elem in enumerate(lst) if condition(elem)]
 
 
 def greedy(node_count: int, edges: list[tuple[int, int]]) -> list[int]:
@@ -45,6 +46,34 @@ def greedy(node_count: int, edges: list[tuple[int, int]]) -> list[int]:
     return solution
 
 
+def CP_solver(num_vals, edges) -> [list[int], bool]:
+    """calling the solver"""
+    from ortools.sat.python import cp_model
+
+    # Create the model
+    model = cp_model.CpModel()
+
+    # Create the variables:
+    variables = [
+        model.NewIntVar(0, num_vals - 1, f'v_{i}') for i in range(num_vals)
+    ]
+
+    # Create the constraints:
+    [model.Add(variables[v_1] != variables[v_2]) for v_1, v_2 in edges]
+
+    # Creates a solver and solves the model.
+    solver = cp_model.CpSolver()
+    status = solver.Solve(model)
+
+    # print_solution
+    if (status == cp_model.OPTIMAL) | (status == cp_model.FEASIBLE):
+        solution = [solver.Value(i) for i in variables]
+    else:
+        raise ValueError('No solution found.')
+
+    return solution, (status == cp_model.OPTIMAL)
+
+
 def solve_it(input_data):
     # Modify this code to run your optimization algorithm
 
@@ -54,6 +83,7 @@ def solve_it(input_data):
     first_line = lines[0].split()
     node_count = int(first_line[0])
     edge_count = int(first_line[1])
+    is_optimal = False
 
     edges = []
 
@@ -63,11 +93,13 @@ def solve_it(input_data):
         edges.append((int(parts[0]), int(parts[1])))
 
     # solution = trivial(node_count)
-    solution = greedy(node_count, edges)
-    objective_value = len(set(solution))
+    # solution = greedy(node_count, edges)
+    solution, is_optimal = CP_solver(node_count, edges)
+
+    objective_value = len(set(solution))  # number of colors
 
     # prepare the solution in the specified output format
-    output_data = str(objective_value) + ' ' + str(0) + '\n'
+    output_data = str(objective_value) + ' ' + str(int(is_optimal)) + '\n'
     output_data += ' '.join(map(str, solution))
 
     return output_data
