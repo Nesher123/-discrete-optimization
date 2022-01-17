@@ -1,12 +1,66 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import logging
 import sys
+import json5 as json
+from datetime import timedelta
+from minizinc import Instance, Model, Solver, Status
+import numpy as np
+
+logging.basicConfig(level=logging.INFO)
 
 '''Helper functions'''
 
 
 def find_indices(lst: list, condition) -> list:
     return [i for i, elem in enumerate(lst) if condition(elem)]
+
+
+def get_maximal_clique_size(edges: list[tuple[int, int]]) -> int:
+    import networkx as nx
+    G = nx.Graph()
+    G.add_edges_from(edges)
+    return len(max(nx.algorithms.clique.find_cliques(G), key=len))
+
+
+def assign_values_to_arguments(instance: Instance, node_count: int, edge_count: int, edges: list[tuple[int, int]],
+                               max_colors: int) -> None:
+    """Assign values to instance's arguments"""
+    instance['NODE_COUNT'] = node_count
+    instance['EDGE_COUNT'] = edge_count
+    instance['EDGES'] = edges
+    instance['MAX_COLORS'] = max_colors
+
+
+def get_best_result_by_solver(model, solver_name, node_count, edge_count, edges, timeout) -> [
+    list[int], bool, int]:
+    solution = None
+    status = False
+    objective_value = -1
+
+    # Find the MiniZinc solver configuration for the desired solver (Gecode/OR-tools/chuffed)
+    solver = Solver.lookup(solver_name)
+
+    # the maximal clique size in a graph is the minimal number of unique colors
+    # needed in order to color a graph chromatically
+    for i in range(get_maximal_clique_size(edges), node_count, 1):  # start, stop, step
+        instance = Instance(solver, model)  # Create an Instance of the model for the desired solver
+        assign_values_to_arguments(instance, node_count, edge_count, edges, i)
+        result = instance.solve(timeout=timeout)
+
+        try:
+            solution = result.solution.colors
+            status = (result.status == Status.OPTIMAL_SOLUTION)
+            objective_value = len(set(result.solution.colors))  # number of colors
+            logging.info(f'Solution found for solver {solver_name} with {i} colors!')
+            break
+        except AttributeError:
+            logging.info(
+                f"No solution found for solver {solver_name} with {i} colors or/and in {timeout.seconds} seconds.\n"
+                f"Trying again with more colors...")
+            continue
+
+    return solution, status, objective_value
 
 
 '''Different solutions functions'''
@@ -75,25 +129,18 @@ def CP_solver_or_tools(num_vals: int, edges: list[tuple[int, int]]) -> [list[int
     return solution, (status == cp_model.OPTIMAL)
 
 
-def CP_solver_minizinc(node_count: int, edge_count: int, edges: list[tuple[int, int]]) -> [list[int], bool]:
+def CP_solver_minizinc(config: dict, node_count: int, edge_count: int, edges: list[tuple[int, int]]) -> [list[int],
+                                                                                                         bool, int]:
     """calling the MiniZinc solver"""
-    from minizinc import Instance, Model, Solver, Status
+    model = Model(config['mz_model'])  # Run input_data through Minizinc Model
+    timeout = timedelta(seconds=config['timedelta_seconds'])
+    best_results = [get_best_result_by_solver(model, 'gecode', node_count, edge_count, edges, timeout),
+                    get_best_result_by_solver(model, 'chuffed', node_count, edge_count, edges, timeout),
+                    # get_best_result_by_solver(model, 'or_tools', node_count, edge_count, edges, timeout)
+                    ]
+    best_result = best_results[np.argmin([i[2] for i in best_results])]
 
-    # Run input_data through Minizinc Model
-    mz_model = 'graph_coloring.mzn'
-    model = Model(mz_model)
-    # Find the MiniZinc solver configuration for Gecode
-    gecode = Solver.lookup('gecode')
-    # Create an Instance of the model for Gecode
-    instance = Instance(gecode, model)
-
-    # Assign values to arguments
-    instance['NODE_COUNT'] = node_count
-    instance['EDGE_COUNT'] = edge_count
-    instance['EDGES'] = edges
-    result = instance.solve()
-
-    return result.solution.colors, (result.status == Status.OPTIMAL_SOLUTION)
+    return best_result
 
 
 def solve_it(input_data):
@@ -116,8 +163,10 @@ def solve_it(input_data):
     # solution, is_optimal = trivial(node_count), False
     # solution, is_optimal = greedy(node_count, edges), False
     # solution, is_optimal = CP_solver_or_tools(node_count, edges)
-    solution, is_optimal = CP_solver_minizinc(node_count, edge_count, edges)
-    objective_value = len(set(solution))  # number of colors
+    # objective_value = len(set(solution))  # number of colors
+
+    config_data = json.load(open('assignment_3_config.json5', 'r'))
+    solution, is_optimal, objective_value = CP_solver_minizinc(config_data, node_count, edge_count, edges)
 
     # prepare the solution in the specified output format
     output_data = str(objective_value) + ' ' + str(int(is_optimal)) + '\n'

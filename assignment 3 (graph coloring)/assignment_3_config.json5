@@ -1,0 +1,4 @@
+{
+    timedelta_seconds: 10,
+    mz_model: 'graph_coloring.mzn'
+}
