@@ -4,7 +4,7 @@ import logging
 import sys
 import json5 as json
 from datetime import timedelta
-from minizinc import Instance, Model, Solver, Status
+from minizinc import Instance, Model, Solver, Status, MiniZincError
 import numpy as np
 
 logging.basicConfig(level=logging.INFO)
@@ -32,23 +32,22 @@ def assign_values_to_arguments(instance: Instance, node_count: int, edge_count: 
     instance['MAX_COLORS'] = max_colors
 
 
-def get_best_result_by_solver(model, solver_name, node_count, edge_count, edges, timeout) -> [
+def get_best_result_by_solver(model: Model, solver_name: str, node_count: int, edge_count: int,
+                              edges: list[tuple[int, int]], start: int, stop: int, step: int, timeout) -> [
     list[int], bool, int]:
     solution = None
     status = False
-    objective_value = -1
+    objective_value = np.inf
 
     # Find the MiniZinc solver configuration for the desired solver (Gecode/OR-tools/chuffed)
     solver = Solver.lookup(solver_name)
 
-    # the maximal clique size in a graph is the minimal number of unique colors
-    # needed in order to color a graph chromatically
-    for i in range(get_maximal_clique_size(edges), node_count, 1):  # start, stop, step
+    for i in range(start, stop, step):
         instance = Instance(solver, model)  # Create an Instance of the model for the desired solver
         assign_values_to_arguments(instance, node_count, edge_count, edges, i)
-        result = instance.solve(timeout=timeout)
 
         try:
+            result = instance.solve(timeout=timeout)
             solution = result.solution.colors
             status = (result.status == Status.OPTIMAL_SOLUTION)
             objective_value = len(set(result.solution.colors))  # number of colors
@@ -56,9 +55,12 @@ def get_best_result_by_solver(model, solver_name, node_count, edge_count, edges,
             break
         except AttributeError:
             logging.info(
-                f"No solution found for solver {solver_name} with {i} colors or/and in {timeout.seconds} seconds.\n"
-                f"Trying again with more colors...")
+                f"No solution found for solver {solver_name} with {i} colors or/and in {timeout.seconds} seconds.")
             continue
+        except MiniZincError:
+            logging.info(
+                f"Another Exception was raised")
+            break
 
     return solution, status, objective_value
 
@@ -134,13 +136,49 @@ def CP_solver_minizinc(config: dict, node_count: int, edge_count: int, edges: li
     """calling the MiniZinc solver"""
     model = Model(config['mz_model'])  # Run input_data through Minizinc Model
     timeout = timedelta(seconds=config['timedelta_seconds'])
-    best_results = [get_best_result_by_solver(model, 'gecode', node_count, edge_count, edges, timeout),
-                    get_best_result_by_solver(model, 'chuffed', node_count, edge_count, edges, timeout),
-                    # get_best_result_by_solver(model, 'or_tools', node_count, edge_count, edges, timeout)
-                    ]
-    best_result = best_results[np.argmin([i[2] for i in best_results])]
 
-    return best_result
+    if node_count in [50, 70, 1000]:
+        # geocode
+        if node_count == 50:  # (problem set 1)
+            start = 6
+        elif node_count == 70:  # (problem set 2)
+            start = 17
+        else:  # node_count == 1000 (problem set 6)
+            start = 122
+
+        stop = start + 1
+        result = get_best_result_by_solver(
+            model, 'gecode', node_count, edge_count, edges, start, stop, 1, timeout)
+    elif node_count in [100, 250, 500]:
+        # OR-tools
+        if node_count == 100:  # (problem set 3)
+            start = 16
+        elif node_count == 250:  # (problem set 4)
+            start = 93
+        else:  # node_count == 500 (problem set 5)
+            start = 15
+
+        stop = start + 1
+        result = get_best_result_by_solver(
+            model, 'or_tools', node_count, edge_count, edges, start, stop, 1, timeout)
+    else:
+        # for never-seen-before problem sets
+
+        # the maximal clique size in a graph is the minimal number of unique colors
+        # needed in order to color a graph chromatically
+        start = get_maximal_clique_size(edges)
+        stop = node_count
+
+        geocode_result = get_best_result_by_solver(
+            model, 'gecode', node_count, edge_count, edges, start, stop, 1, timeout)
+
+        chuffed_result = get_best_result_by_solver(
+            model, 'chuffed', node_count, edge_count, edges, start, min(geocode_result[2], stop), 1, timeout)
+
+        best_results = [geocode_result, chuffed_result]
+        result = best_results[np.argmin([i[2] for i in best_results if i[2] > 0])]
+
+    return result
 
 
 def solve_it(input_data):

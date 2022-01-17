@@ -1,4 +1,4 @@
 {
-    timedelta_seconds: 10,
+    timedelta_seconds: 60,
     mz_model: 'graph_coloring.mzn'
 }
