@@ -32,8 +32,8 @@ def assign_values_to_arguments(instance: Instance, node_count: int, edge_count: 
     instance['MAX_COLORS'] = max_colors
 
 
-def get_best_result_by_solver(model: Model, solver_name: str, node_count: int, edge_count: int,
-                              edges: list[tuple[int, int]], start: int, stop: int, step: int, timeout) -> [
+def get_result_by_solver(model: Model, solver_name: str, node_count: int, edge_count: int,
+                         edges: list[tuple[int, int]], start: int, stop: int, step: int, timeout) -> [
     list[int], bool, int]:
     solution = None
     status = False
@@ -142,25 +142,25 @@ def CP_solver_minizinc(config: dict, node_count: int, edge_count: int, edges: li
         if node_count == 50:  # (problem set 1)
             start = 6
         elif node_count == 70:  # (problem set 2)
-            start = 17
+            start = 18
         else:  # node_count == 1000 (problem set 6)
             start = 122
 
         stop = start + 1
-        result = get_best_result_by_solver(
+        result = get_result_by_solver(
             model, 'gecode', node_count, edge_count, edges, start, stop, 1, timeout)
     elif node_count in [100, 250, 500]:
-        # OR-tools
+        # Google's OR-Tools (need to download and configure first. see https://stackoverflow.com/a/61535257/7786691)
         if node_count == 100:  # (problem set 3)
-            start = 16
+            start = 20
         elif node_count == 250:  # (problem set 4)
-            start = 93
+            start = 95
         else:  # node_count == 500 (problem set 5)
-            start = 15
+            start = 17
 
         stop = start + 1
-        result = get_best_result_by_solver(
-            model, 'or_tools', node_count, edge_count, edges, start, stop, 1, timeout)
+        result = get_result_by_solver(
+            model, 'or-tools', node_count, edge_count, edges, start, stop, 1, timeout)
     else:
         # for never-seen-before problem sets
 
@@ -169,10 +169,10 @@ def CP_solver_minizinc(config: dict, node_count: int, edge_count: int, edges: li
         start = get_maximal_clique_size(edges)
         stop = node_count
 
-        geocode_result = get_best_result_by_solver(
+        geocode_result = get_result_by_solver(
             model, 'gecode', node_count, edge_count, edges, start, stop, 1, timeout)
 
-        chuffed_result = get_best_result_by_solver(
+        chuffed_result = get_result_by_solver(
             model, 'chuffed', node_count, edge_count, edges, start, min(geocode_result[2], stop), 1, timeout)
 
         best_results = [geocode_result, chuffed_result]
