@@ -1,4 +1,4 @@
-# Traveling Salesman (assignment #4)
+# The Traveling Salesman Problem, TSP (assignment #4)
 
 ## Grade: /60 (%)
 
