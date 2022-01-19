@@ -2,14 +2,14 @@
 
 ## Grade: 45/60 (75%)
 
-- Coloring Problem 1: 10/10
-- Coloring Problem 2: 7/10
-- Coloring Problem 3: 7/10
-- Coloring Problem 4: 7/10
-- Coloring Problem 5: 7/10
-- Coloring Problem 6: 7/10
+- Problem 1: 10/10
+- Problem 2: 7/10
+- Problem 3: 7/10
+- Problem 4: 7/10
+- Problem 5: 7/10
+- Problem 6: 7/10
 
-### References:
+## References:
 
 - **MiniZinc** constraint modeling language: https://www.minizinc.org
 - MiniZinc python: https://minizinc-python.readthedocs.io/en/latest/getting_started.html
@@ -18,7 +18,7 @@
 - Installing & configuring Google's "**OR Tools**" solver for using with
   MiniZinc: https://stackoverflow.com/a/61535257/7786691
 
-### TO DO:
+## TO DO:
 
 - Close all running tasks on computer and try finding solutions with less colors and automatically using different
   solvers.
