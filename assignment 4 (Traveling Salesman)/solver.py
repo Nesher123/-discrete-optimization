@@ -66,27 +66,36 @@ def greedy(points: list[Point]) -> list[int]:
     return solution
 
 
-def simulated_annealing(points: list[Point], solution: list[int]) -> [list[int], float]:
+def simulated_annealing(config_data: dict, points: list[Point], solution: list[int]) -> [list[int], float]:
     """
-    get a solution (can be random or the results of the greedy algorithm, for a better baseline)
-    Then, apply simulated annealing algorithm on the given solution to improve the total cost (length of the road)
+    Get a solution (can be random or the results of the greedy algorithm, as a better baseline).
+    Then, apply simulated annealing algorithm on the given solution to improve the total cost (length of tour)
 
+    We can apply either a 'reverse' or 'transport' approach - to reverse the tour between 2 indices,
+    or to move that part to the end of the solution and change the original solution anyway.
+
+    :param config_data:
     :param points:
     :param solution: current working solution
     :return: best working solution
     """
-    number_of_iterations = 1000
-    initial_temperature = 100  # initial temperature
+    approach = config_data['approach']
+    initial_temperature = config_data['initial_temperature']  # initial temperature
     best_objective = calculate_length_of_tour(points, solution)  # evaluate the initial solution
 
-    for i in range(number_of_iterations):
+    for i in range(config_data['number_of_iterations']):
         temperature = initial_temperature / float(i + 1)  # calculate temperature for current epoch
         start_index, end_index = sorted(random.sample(range(0, len(solution)), 2))
-        candidate_solution = \
-            solution[0:start_index] + list(reversed(solution[start_index:end_index])) + solution[end_index:]
-        # candidate_solution = solution[0:start_index] + solution[end_index:] + list(solution[start_index:end_index])
-        candidate_objective = calculate_length_of_tour(points, candidate_solution)
+        # start_index = random.randint(0, len(solution) - config_data['window_size'])
+        # end_index = start_index + config_data['window_size']
 
+        if approach == config_data['reverse']:
+            candidate_solution = \
+                solution[0:start_index] + list(reversed(solution[start_index:end_index])) + solution[end_index:]
+        else:  # transport
+            candidate_solution = solution[0:start_index] + solution[end_index:] + list(solution[start_index:end_index])
+
+        candidate_objective = calculate_length_of_tour(points, candidate_solution)
         diff = candidate_objective - best_objective  # difference between candidate and current evaluations
         metropolis = np.exp(-diff / temperature)  # calculate metropolis acceptance criterion
 
@@ -112,10 +121,12 @@ def solve_it(input_data):
         parts = line.split()
         points.append(Point(float(parts[0]), float(parts[1]), i - 1))
 
+    config_data = json.load(open('assignment_4_config.json5', 'r'))
+
     # choose your desired algorithm to run:
     # solution = trivial(node_count)
     solution = greedy(points.copy())
-    solution, objective = simulated_annealing(points, solution)
+    solution, objective = simulated_annealing(config_data, points, solution)
     is_optimal = False
 
     # prepare the solution in the specified output format
