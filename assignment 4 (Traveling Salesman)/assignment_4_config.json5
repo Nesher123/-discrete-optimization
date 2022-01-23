@@ -2,8 +2,8 @@
     number_of_iterations: 1000,
     initial_temperature: 100,
     window_size: 10,
+    approach: 'reverse',
     reverse: 'reverse',
     transport: 'transport',
-    approach: 'reverse',
-    // or 'transport'
+    swap: 'swap'
 }

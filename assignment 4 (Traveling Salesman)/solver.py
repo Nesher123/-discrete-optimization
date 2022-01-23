@@ -1,6 +1,5 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-
 import math
 from collections import namedtuple
 import sys
@@ -8,6 +7,7 @@ import logging
 import numpy as np
 import json5 as json
 import random
+import copy
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 Point = namedtuple('Point', ['x', 'y', 'i'])
@@ -71,8 +71,10 @@ def simulated_annealing(config_data: dict, points: list[Point], solution: list[i
     Get a solution (can be random or the results of the greedy algorithm, as a better baseline).
     Then, apply simulated annealing algorithm on the given solution to improve the total cost (length of tour)
 
-    We can apply either a 'reverse' or 'transport' approach - to reverse the tour between 2 indices,
-    or to move that part to the end of the solution and change the original solution anyway.
+    We can apply either a reverse/transport/swap approach:
+        - reverse the tour between 2 indices
+        - move a part between 2 indices to the end of the solution and change the original solution anyway
+        - swap values of 2 indices such that the tour is changed
 
     :param config_data:
     :param points:
@@ -85,15 +87,33 @@ def simulated_annealing(config_data: dict, points: list[Point], solution: list[i
 
     for i in range(config_data['number_of_iterations']):
         temperature = initial_temperature / float(i + 1)  # calculate temperature for current epoch
-        start_index, end_index = sorted(random.sample(range(0, len(solution)), 2))
+        start_index, end_index = sorted([random.randint(0, len(solution) - 1), random.randint(0, len(solution) - 1)])
         # start_index = random.randint(0, len(solution) - config_data['window_size'])
         # end_index = start_index + config_data['window_size']
+        candidate_solution = copy.deepcopy(solution)
 
         if approach == config_data['reverse']:
-            candidate_solution = \
-                solution[0:start_index] + list(reversed(solution[start_index:end_index])) + solution[end_index:]
-        else:  # transport
+            candidate_solution[start_index:end_index] = list(reversed(candidate_solution[start_index:end_index]))
+        elif approach == config_data['transport']:
             candidate_solution = solution[0:start_index] + solution[end_index:] + list(solution[start_index:end_index])
+        elif approach == config_data['swap']:
+            temp = candidate_solution[start_index]
+            candidate_solution[start_index] = candidate_solution[end_index]
+            candidate_solution[end_index] = temp
+
+            # if best_objective \
+            #         - length(points[solution[start_index - 1]], points[solution[start_index]]) \
+            #         - length(points[solution[end_index - 1]], points[solution[end_index]]) \
+            #         + length(points[solution[start_index - 1]], points[solution[end_index]]) \
+            #         + length(points[solution[end_index - 1]], points[solution[start_index]]) \
+            #         < best_objective:
+            #     temp = candidate_solution[start_index]
+            #     candidate_solution[start_index] = candidate_solution[end_index]
+            #     candidate_solution[end_index] = temp
+            # else:
+            #     continue
+        else:
+            raise ValueError('Provide a valid approach name in the configuration file, under the "approach" attribute.')
 
         candidate_objective = calculate_length_of_tour(points, candidate_solution)
         diff = candidate_objective - best_objective  # difference between candidate and current evaluations
