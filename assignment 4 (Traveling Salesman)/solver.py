@@ -158,8 +158,6 @@ def solve_it(input_data):
 
     solution, objective = simulated_annealing(points, solution, config_data, config_data['transport'],
                                               config_data['initial_temperature'], config_data['number_of_iterations'])
-    solution, objective = simulated_annealing(points, solution, config_data, config_data['reverse'],
-                                              20, config_data['number_of_iterations'])
 
     # prepare the solution in the specified output format
     output_data = '%.2f' % objective + ' ' + str(int(is_optimal)) + '\n'
