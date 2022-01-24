@@ -31,6 +31,27 @@ def calculate_length_of_tour(points: list[Point], solution: list[int]) -> float:
     return objective
 
 
+def two_OPT(points: list[Point], candidate_solution: list[int], start_index: int, end_index: int) -> list[int]:
+    for i in range(2, len(candidate_solution[start_index:end_index]) - 1):
+        partial_objective = calculate_length_of_tour(points, candidate_solution[start_index:end_index])
+
+        if partial_objective \
+                - length(points[candidate_solution[start_index:end_index][i - 2]],
+                         points[candidate_solution[start_index:end_index][i - 1]]) \
+                - length(points[candidate_solution[start_index:end_index][i]],
+                         points[candidate_solution[start_index:end_index][i + 1]]) \
+                + length(points[candidate_solution[start_index:end_index][i - 2]],
+                         points[candidate_solution[start_index:end_index][i]]) \
+                + length(points[candidate_solution[start_index:end_index][i - 1]],
+                         points[candidate_solution[start_index:end_index][i + 1]]) \
+                < partial_objective:
+            temp = candidate_solution[start_index:end_index][i - 1]
+            candidate_solution[start_index:end_index][i - 1] = candidate_solution[start_index:end_index][i]
+            candidate_solution[start_index:end_index][i] = temp
+
+    return candidate_solution
+
+
 """
 Different solutions functions
 """
@@ -102,19 +123,8 @@ def simulated_annealing(points: list[Point], solution: list[int], config_data: d
 
         if approach == config_data['reverse']:
             candidate_solution[start_index:end_index] = list(reversed(candidate_solution[start_index:end_index]))
-
-            # for i in range(2, len(candidate_solution[start_index:end_index]) - 1):
-            #     partial_objective = calculate_length_of_tour(points, candidate_solution[start_index:end_index])
-            #
-            #     if partial_objective \
-            #             - length(points[candidate_solution[i - 2]], points[candidate_solution[i - 1]]) \
-            #             - length(points[candidate_solution[i]], points[candidate_solution[i + 1]]) \
-            #             + length(points[candidate_solution[i - 2]], points[candidate_solution[i]]) \
-            #             + length(points[candidate_solution[i - 1]], points[candidate_solution[i + 1]]) \
-            #             < partial_objective:
-            #         temp = candidate_solution[i - 1]
-            #         candidate_solution[i - 1] = candidate_solution[i]
-            #         candidate_solution[i] = temp
+            # TODO: small bug. Fix
+            # candidate_solution = two_OPT(points, candidate_solution.copy(), start_index, end_index)
         elif approach == config_data['transport']:
             candidate_solution = solution[0:start_index] + solution[end_index:] + list(solution[start_index:end_index])
         elif approach == config_data['swap']:  # randomly swap 2 vertices
