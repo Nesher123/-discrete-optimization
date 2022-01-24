@@ -167,6 +167,7 @@ def solve_it(input_data):
         with open(f'recent_solutions/solution_{node_count}.txt', 'r') as _:
             solution_lines = _.read().split('\n')
             solution = list(map(int, solution_lines[1].split(' ')))
+            objective = calculate_length_of_tour(points, solution)
     except FileNotFoundError:
         # choose your desired algorithm to run:
         # solution = trivial(node_count)
