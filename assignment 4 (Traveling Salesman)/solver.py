@@ -88,30 +88,29 @@ def simulated_annealing(config_data: dict, points: list[Point], solution: list[i
     for i in range(config_data['number_of_iterations']):
         temperature = initial_temperature / float(i + 1)  # calculate temperature for current epoch
         start_index, end_index = sorted([random.randint(0, len(solution) - 1), random.randint(0, len(solution) - 1)])
-        # start_index = random.randint(0, len(solution) - config_data['window_size'])
-        # end_index = start_index + config_data['window_size']
         candidate_solution = copy.deepcopy(solution)
 
         if approach == config_data['reverse']:
             candidate_solution[start_index:end_index] = list(reversed(candidate_solution[start_index:end_index]))
+
+            # for i in range(2, len(candidate_solution[start_index:end_index]) - 1):
+            #     partial_objective = calculate_length_of_tour(points, candidate_solution[start_index:end_index])
+            #
+            #     if partial_objective \
+            #             - length(points[candidate_solution[i - 2]], points[candidate_solution[i - 1]]) \
+            #             - length(points[candidate_solution[i]], points[candidate_solution[i + 1]]) \
+            #             + length(points[candidate_solution[i - 2]], points[candidate_solution[i]]) \
+            #             + length(points[candidate_solution[i - 1]], points[candidate_solution[i + 1]]) \
+            #             < partial_objective:
+            #         temp = candidate_solution[i - 1]
+            #         candidate_solution[i - 1] = candidate_solution[i]
+            #         candidate_solution[i] = temp
         elif approach == config_data['transport']:
             candidate_solution = solution[0:start_index] + solution[end_index:] + list(solution[start_index:end_index])
-        elif approach == config_data['swap']:
+        elif approach == config_data['swap']:  # randomly swap 2 vertices
             temp = candidate_solution[start_index]
             candidate_solution[start_index] = candidate_solution[end_index]
             candidate_solution[end_index] = temp
-
-            # if best_objective \
-            #         - length(points[solution[start_index - 1]], points[solution[start_index]]) \
-            #         - length(points[solution[end_index - 1]], points[solution[end_index]]) \
-            #         + length(points[solution[start_index - 1]], points[solution[end_index]]) \
-            #         + length(points[solution[end_index - 1]], points[solution[start_index]]) \
-            #         < best_objective:
-            #     temp = candidate_solution[start_index]
-            #     candidate_solution[start_index] = candidate_solution[end_index]
-            #     candidate_solution[end_index] = temp
-            # else:
-            #     continue
         else:
             raise ValueError('Provide a valid approach name in the configuration file, under the "approach" attribute.')
 
@@ -142,19 +141,25 @@ def solve_it(input_data):
         points.append(Point(float(parts[0]), float(parts[1]), i - 1))
 
     config_data = json.load(open('assignment_4_config.json5', 'r'))
-
-    # choose your desired algorithm to run:
-    # solution = trivial(node_count)
-    solution = greedy(points.copy())
-    solution, objective = simulated_annealing(config_data, points, solution)
     is_optimal = False
+
+    try:
+        with open(f'solution_{node_count}.txt', 'r') as _:
+            solution_lines = _.read().split('\n')
+            solution = list(map(int, solution_lines[1].split(' ')))
+    except FileNotFoundError:
+        # choose your desired algorithm to run:
+        # solution = trivial(node_count)
+        solution = greedy(points.copy())
+
+    solution, objective = simulated_annealing(config_data, points, solution)
 
     # prepare the solution in the specified output format
     output_data = '%.2f' % objective + ' ' + str(int(is_optimal)) + '\n'
     output_data += ' '.join(map(str, solution))
 
-    # with open('solution.txt', 'w') as f:
-    #     f.write(output_data)
+    with open(f'solution_{node_count}.txt', 'w') as f:
+        f.write(output_data)
 
     return output_data
 
