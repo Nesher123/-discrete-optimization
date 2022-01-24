@@ -15,12 +15,11 @@
   "Benchmark file" (left) is the data file for the problem (from "data" directory). "Solution file" (right) is the
   solution created by you.<br>
   Just put your `output_data` to a text file (Use output format described in the handout, of course).
-- https://www.fourmilab.ch/documents/travelling/anneal
-- https://machinelearningmastery.com/simulated-annealing-from-scratch-in-python
-- 
+- **Simulated Annealing**:
+    - https://www.fourmilab.ch/documents/travelling/anneal
+    - https://machinelearningmastery.com/simulated-annealing-from-scratch-in-python
 
 ## TO DO:
-
 
 A nice simulation of TSP with **Simulated Annealing** found online:
 ![fun simulation of TSP](https://toddwschneiderdotcom.twscontent.com/img/i/GcCXmEL.gif)
