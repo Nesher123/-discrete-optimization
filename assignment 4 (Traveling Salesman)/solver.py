@@ -91,7 +91,13 @@ def simulated_annealing(points: list[Point], solution: list[int], config_data: d
 
     for i in range(number_of_iterations):
         temperature = initial_temperature / float(i + 1)  # calculate temperature for current epoch
-        start_index, end_index = sorted([random.randint(0, len(solution) - 1), random.randint(0, len(solution) - 1)])
+
+        start_index, end_index = -1, -1
+
+        while start_index == end_index:
+            start_index, end_index = sorted(
+                [random.randint(0, len(solution) - 1), random.randint(0, len(solution) - 1)])
+
         candidate_solution = copy.deepcopy(solution)
 
         if approach == config_data['reverse']:
