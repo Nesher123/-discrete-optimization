@@ -66,7 +66,9 @@ def greedy(points: list[Point]) -> list[int]:
     return solution
 
 
-def simulated_annealing(config_data: dict, points: list[Point], solution: list[int]) -> [list[int], float]:
+def simulated_annealing(points: list[Point], solution: list[int], config_data: dict, approach: str,
+                        initial_temperature: int, number_of_iterations: int) -> [
+    list[int], float]:
     """
     Get a solution (can be random or the results of the greedy algorithm, as a better baseline).
     Then, apply simulated annealing algorithm on the given solution to improve the total cost (length of tour)
@@ -76,16 +78,18 @@ def simulated_annealing(config_data: dict, points: list[Point], solution: list[i
         - move a part between 2 indices to the end of the solution and change the original solution anyway
         - swap values of 2 indices such that the tour is changed
 
-    :param config_data:
     :param points:
     :param solution: current working solution
+    :param config_data:
+    :param approach:
+    :param initial_temperature:
+    :param number_of_iterations:
+
     :return: best working solution
     """
-    approach = config_data['approach']
-    initial_temperature = config_data['initial_temperature']  # initial temperature
     best_objective = calculate_length_of_tour(points, solution)  # evaluate the initial solution
 
-    for i in range(config_data['number_of_iterations']):
+    for i in range(number_of_iterations):
         temperature = initial_temperature / float(i + 1)  # calculate temperature for current epoch
         start_index, end_index = sorted([random.randint(0, len(solution) - 1), random.randint(0, len(solution) - 1)])
         candidate_solution = copy.deepcopy(solution)
@@ -140,11 +144,11 @@ def solve_it(input_data):
         parts = line.split()
         points.append(Point(float(parts[0]), float(parts[1]), i - 1))
 
-    config_data = json.load(open('assignment_4_config.json5', 'r'))
+    config_data = json.load(open('config.json5', 'r'))
     is_optimal = False
 
     try:
-        with open(f'solution_{node_count}.txt', 'r') as _:
+        with open(f'recent_solutions/solution_{node_count}.txt', 'r') as _:
             solution_lines = _.read().split('\n')
             solution = list(map(int, solution_lines[1].split(' ')))
     except FileNotFoundError:
@@ -152,7 +156,10 @@ def solve_it(input_data):
         # solution = trivial(node_count)
         solution = greedy(points.copy())
 
-    solution, objective = simulated_annealing(config_data, points, solution)
+    solution, objective = simulated_annealing(points, solution, config_data, config_data['transport'],
+                                              config_data['initial_temperature'], config_data['number_of_iterations'])
+    solution, objective = simulated_annealing(points, solution, config_data, config_data['reverse'],
+                                              20, config_data['number_of_iterations'])
 
     # prepare the solution in the specified output format
     output_data = '%.2f' % objective + ' ' + str(int(is_optimal)) + '\n'

@@ -1,7 +1,6 @@
 {
     number_of_iterations: 10000,
-    initial_temperature: 20,
-    approach: 'transport',
+    initial_temperature: 100,
     reverse: 'reverse',
     transport: 'transport',
     swap: 'swap'

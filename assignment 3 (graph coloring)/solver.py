@@ -203,7 +203,7 @@ def solve_it(input_data):
     # solution, is_optimal = CP_solver_or_tools(node_count, edges)
     # objective_value = len(set(solution))  # number of colors
 
-    config_data = json.load(open('assignment_3_config.json5', 'r'))
+    config_data = json.load(open('config.json5', 'r'))
     solution, is_optimal, objective_value = CP_solver_minizinc(config_data, node_count, edge_count, edges)
 
     # prepare the solution in the specified output format
