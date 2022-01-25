@@ -8,6 +8,7 @@ import numpy as np
 import json5 as json
 import random
 import copy
+from itertools import combinations
 
 logging.basicConfig(format='%(levelname)s:%(message)s', level=logging.INFO)
 Point = namedtuple('Point', ['x', 'y', 'i'])
@@ -29,27 +30,6 @@ def calculate_length_of_tour(points: list[Point], solution: list[int]) -> float:
         objective += length(points[solution[index]], points[solution[index + 1]])
 
     return objective
-
-
-def two_OPT(points: list[Point], candidate_solution: list[int], start_index: int, end_index: int) -> list[int]:
-    for i in range(2, len(candidate_solution[start_index:end_index]) - 1):
-        partial_objective = calculate_length_of_tour(points, candidate_solution[start_index:end_index])
-
-        if partial_objective \
-                - length(points[candidate_solution[start_index:end_index][i - 2]],
-                         points[candidate_solution[start_index:end_index][i - 1]]) \
-                - length(points[candidate_solution[start_index:end_index][i]],
-                         points[candidate_solution[start_index:end_index][i + 1]]) \
-                + length(points[candidate_solution[start_index:end_index][i - 2]],
-                         points[candidate_solution[start_index:end_index][i]]) \
-                + length(points[candidate_solution[start_index:end_index][i - 1]],
-                         points[candidate_solution[start_index:end_index][i + 1]]) \
-                < partial_objective:
-            temp = candidate_solution[start_index:end_index][i - 1]
-            candidate_solution[start_index:end_index][i - 1] = candidate_solution[start_index:end_index][i]
-            candidate_solution[start_index:end_index][i] = temp
-
-    return candidate_solution
 
 
 """
@@ -122,9 +102,8 @@ def simulated_annealing(points: list[Point], solution: list[int], config_data: d
         candidate_solution = copy.deepcopy(solution)
 
         if approach == config_data['reverse']:
-            candidate_solution[start_index:end_index] = list(reversed(candidate_solution[start_index:end_index]))
-            # TODO: small bug. Fix
-            # candidate_solution = two_OPT(points, candidate_solution.copy(), start_index, end_index)
+            candidate_solution[start_index:end_index + 1] = list(
+                reversed(candidate_solution[start_index:end_index + 1]))
         elif approach == config_data['transport']:
             candidate_solution = solution[0:start_index] + solution[end_index:] + list(solution[start_index:end_index])
         elif approach == config_data['swap']:  # randomly swap 2 vertices
@@ -144,6 +123,59 @@ def simulated_annealing(points: list[Point], solution: list[int], config_data: d
             solution = candidate_solution  # store it
 
     return solution, best_objective
+
+
+def two_OPT_swap(points: list[Point], solution: list[int], start_index: int, end_index: int,
+                 improvement_threshold: float = 10 ** -6) -> bool:
+    """
+    Check if swapping 2 indices (given as start_index and end_index) reduces the tour's length
+
+    :param points:
+    :param solution:
+    :param start_index:
+    :param end_index:
+    :param improvement_threshold:
+
+    :return: bool
+        True if swapping improves
+        False otherwise
+    """
+    improved = False
+    partial_objective = calculate_length_of_tour(points, solution[start_index:end_index])
+    candidate_solution = solution[:start_index] + solution[start_index:end_index + 1][::-1] + solution[end_index + 1:]
+    new_partial_objective = partial_objective - \
+                            length(points[solution[start_index - 1]], points[solution[start_index]]) - \
+                            length(points[solution[end_index]], points[solution[end_index + 1]]) + \
+                            length(points[candidate_solution[start_index - 1]],
+                                   points[candidate_solution[start_index]]) + \
+                            length(points[candidate_solution[end_index]], points[candidate_solution[(end_index + 1)]])
+
+    if new_partial_objective < partial_objective - improvement_threshold:
+        improved = True
+
+    return improved
+
+
+def two_OPT(points: list[Point], solution: list[int]) -> list[int]:
+    """
+    Check EVERY pair of indices and override current solution if swapping returns True.
+
+    :param points:
+    :param solution:
+    :return: the best solution after all swaps occurred (if any)
+    """
+    improved = True
+
+    while improved:
+        improved = False
+
+        for start_index, end_index in combinations(range(1, len(solution) - 1), 2):
+            if two_OPT_swap(points, solution, start_index, end_index):
+                solution = solution[:start_index] + solution[start_index:end_index + 1][::-1] + solution[end_index + 1:]
+                improved = True
+                break
+
+    return solution
 
 
 def solve_it(input_data):
@@ -167,19 +199,26 @@ def solve_it(input_data):
         with open(f'recent_solutions/solution_{node_count}.txt', 'r') as _:
             solution_lines = _.read().split('\n')
             solution = list(map(int, solution_lines[1].split(' ')))
-            objective = calculate_length_of_tour(points, solution)
     except FileNotFoundError:
         # choose your desired algorithm to run:
         # solution = trivial(node_count)
         solution = greedy(points.copy())
 
-    solution, objective = simulated_annealing(points, solution, config_data, config_data['transport'],
-                                              config_data['initial_temperature'], config_data['number_of_iterations'])
+    solution, current_objective = simulated_annealing(points, solution, config_data,
+                                                      config_data['reverse'],
+                                                      config_data['initial_temperature'],
+                                                      config_data['number_of_iterations'])
 
-    # we can perform another round of simulated_annealing with a different/same approach to help improve the result
-    # (optional):
-    solution, objective = simulated_annealing(points, solution, config_data, config_data['reverse'],
-                                              config_data['initial_temperature'], config_data['number_of_iterations'])
+    # we can perform ANOTHER round of simulated_annealing with different/same approach to help improve the result
+
+    # apply 2-OPT swap algorithm to improve results even more
+    new_objective = current_objective
+
+    while current_objective >= new_objective:
+        solution = two_OPT(points, solution)
+        new_objective = calculate_length_of_tour(points, solution)
+
+    objective = new_objective
 
     # prepare the solution in the specified output format
     output_data = '%.2f' % objective + ' ' + str(int(is_optimal)) + '\n'
