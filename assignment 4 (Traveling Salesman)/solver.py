@@ -32,6 +32,16 @@ def calculate_length_of_tour(points: list[Point], solution: list[int]) -> float:
     return objective
 
 
+def get_random_indices(my_list: list[int]) -> [int, int]:
+    start_index, end_index = -1, -1
+
+    while start_index == end_index:
+        start_index, end_index = sorted(
+            [random.randint(0, len(my_list) - 1), random.randint(0, len(my_list) - 1)])
+
+    return start_index, end_index
+
+
 """
 Different solutions functions
 """
@@ -93,11 +103,7 @@ def simulated_annealing(points: list[Point], solution: list[int], config_data: d
     for i in range(number_of_iterations):
         temperature = initial_temperature / float(i + 1)  # calculate temperature for current epoch
 
-        start_index, end_index = -1, -1
-
-        while start_index == end_index:
-            start_index, end_index = sorted(
-                [random.randint(0, len(solution) - 1), random.randint(0, len(solution) - 1)])
+        start_index, end_index = get_random_indices(solution)
 
         candidate_solution = copy.deepcopy(solution)
 
@@ -115,17 +121,19 @@ def simulated_annealing(points: list[Point], solution: list[int], config_data: d
 
         candidate_objective = calculate_length_of_tour(points, candidate_solution)
         diff = candidate_objective - best_objective  # difference between candidate and current evaluations
-        metropolis = np.exp(-diff / temperature)  # calculate metropolis acceptance criterion
+
+        x = min(-diff / temperature, 10)
+        metropolis = np.exp(x)  # calculate metropolis acceptance criterion
 
         # check for new best solution or metropolis acceptance criterion satisfied
         if (diff < 0) | (np.random.rand() < metropolis):
             best_objective = candidate_objective
             solution = candidate_solution  # store it
 
-    return solution, best_objective
+    return solution, calculate_length_of_tour(points, solution)
 
 
-def two_OPT_swap(points: list[Point], solution: list[int], start_index: int, end_index: int,
+def two_opt_swap(points: list[Point], solution: list[int], start_index: int, end_index: int,
                  improvement_threshold: float = 10 ** -6) -> bool:
     """
     Check if swapping 2 indices (given as start_index and end_index) reduces the tour's length
@@ -156,7 +164,7 @@ def two_OPT_swap(points: list[Point], solution: list[int], start_index: int, end
     return improved
 
 
-def two_OPT(points: list[Point], solution: list[int]) -> list[int]:
+def two_opt(points: list[Point], solution: list[int]) -> list[int]:
     """
     Check EVERY pair of indices and override current solution if swapping returns True.
 
@@ -170,12 +178,25 @@ def two_OPT(points: list[Point], solution: list[int]) -> list[int]:
         improved = False
 
         for start_index, end_index in combinations(range(1, len(solution) - 1), 2):
-            if two_OPT_swap(points, solution, start_index, end_index):
+            if two_opt_swap(points, solution, start_index, end_index):
                 solution = solution[:start_index] + solution[start_index:end_index + 1][::-1] + solution[end_index + 1:]
                 improved = True
                 break
 
     return solution
+
+
+def shuffle(input_list, n=2):
+    """Shuffles any n number of values in a list"""
+    indices_to_shuffle = random.sample(range(len(input_list)), k=n)
+    to_shuffle = [input_list[i] for i in indices_to_shuffle]
+    random.shuffle(to_shuffle)
+
+    for index, value in enumerate(to_shuffle):
+        old_index = indices_to_shuffle[index]
+        input_list[old_index] = value
+
+    return input_list
 
 
 def solve_it(input_data):
@@ -199,25 +220,39 @@ def solve_it(input_data):
         with open(f'recent_solutions/solution_{node_count}.txt', 'r') as _:
             solution_lines = _.read().split('\n')
             solution = list(map(int, solution_lines[1].split(' ')))
+            objective = calculate_length_of_tour(points, solution)
     except FileNotFoundError:
         # choose your desired algorithm to run:
         # solution = trivial(node_count)
         solution = greedy(points.copy())
 
-    solution, current_objective = simulated_annealing(points, solution, config_data,
-                                                      config_data['reverse'],
-                                                      config_data['initial_temperature'],
-                                                      config_data['number_of_iterations'])
+    solution = trivial(node_count)
+    new_objective = calculate_length_of_tour(points, solution)
+    BEST = config_data[f'solution_{node_count}']
 
-    # we can perform ANOTHER round of simulated_annealing with different/same approach to help improve the result
+    while BEST < new_objective:
+        # approach = random.choice([config_data['reverse'], config_data['transport']])
+        # solution, new_objective = simulated_annealing(
+        #     points, solution, config_data, approach, config_data['initial_temperature'],
+        #     config_data['number_of_iterations'])
+        #
+        # # we can perform ANOTHER round of simulated_annealing with different/same approach to help improve the result
+        #
+        # logging.info(f'1: {new_objective}')
+        #
+        # if BEST >= new_objective:
+        #     break
 
-    # apply 2-OPT swap algorithm to improve results even more
-    new_objective = current_objective
-
-    while current_objective >= new_objective:
-        solution = two_OPT(points, solution)
+        # apply 2-OPT swap algorithm to improve results even more
+        solution = two_opt(points, solution)
         new_objective = calculate_length_of_tour(points, solution)
+        logging.info(f'2: {new_objective}')
 
+        if BEST < new_objective:
+            # local minima encountered - shuffle parts of the solution in order to escape it.
+            solution = shuffle(solution, n=config_data['shuffle_amount'])
+
+    # new record for this problem set!
     objective = new_objective
 
     # prepare the solution in the specified output format

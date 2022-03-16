@@ -1,7 +1,12 @@
 {
     number_of_iterations: 10000,
-    initial_temperature: 100,
+    initial_temperature: 900,
     reverse: 'reverse',
     transport: 'transport',
-    swap: 'swap'
+    swap: 'swap',
+    solution_100: 20800,
+    solution_200: 30000,
+    solution_1889: 378069,
+    solution_33810: 67700000,
+    shuffle_amount: 70
 }
